@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000;
 const app = express();
@@ -35,16 +35,58 @@ async function run() {
     await client.connect();
     const coffeeCollection = client.db("coffeeDB").collection("coffee")
 
+// read/get data to localhost
+app.get('/coffee',async(req,res)=>{
+  const cursor = coffeeCollection.find()
+  const coffees = await cursor.toArray()
+  res.send(coffees)
+})
+
+// create/post
 app.post('/coffee',async(req,res)=>{
-    const newCoffee = req.body
-    console.log(newCoffee);
-    
-    // send data in the database/mongoDB
-   const result = await coffeeCollection.insertOne(newCoffee)
-   res.send(result);
+  const newCoffee = req.body //get data from client side
+  console.log(newCoffee);
+  // send data to the database/mongoDB
+ const result = await coffeeCollection.insertOne(newCoffee)
+ res.send(result);
+})
+
+// update/put
+app.get('/coffee/:id', async(req,res)=>{
+  const id = req.params.id
+  const query = { _id: new ObjectId(id)}
+  const coffee = await coffeeCollection.findOne(query)
+  res.send(coffee)
+})
+
+app.put('/coffee/:id',async(req,res)=>{
+  const id = req.params.id
+  const filter = {_id: new ObjectId(id)}
+  const options = { upsert: true };
+  const updateCoffee = req.body
+  const coffee = {
+    $set:{
+      name:updateCoffee.name,
+       quantity:updateCoffee.quantity,
+        supplier:updateCoffee.supplier, 
+        taste:updateCoffee.taste, 
+        category:updateCoffee.category,
+         details:updateCoffee.details,
+          photo:updateCoffee.photo
+    }
+  }
+  const result = await coffeeCollection.updateOne(filter,coffee,options)
+  res.send(result)
 })
 
 
+// delete
+app.delete('/coffee/:id', async(req,res)=>{
+  const id = req.params.id
+  const query = {_id : new ObjectId(id)}
+  const result = await coffeeCollection.deleteOne(query)
+  res.send(result)
+})
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
